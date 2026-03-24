@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GT Campus Pedestrian Flow</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #0d0d1a; overflow: hidden; }
+
+    #map {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+    }
+
+    .panel {
+      position: absolute;
+      background: rgba(10, 10, 22, 0.84);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      color: #e0e0f0;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      z-index: 1000;
+    }
+
+    /* Title + Stats — top left */
+    #title-panel {
+      top: 20px;
+      left: 20px;
+      padding: 16px 18px;
+      max-width: 240px;
+    }
+    #title-panel h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: #f0eeff;
+      line-height: 1.3;
+    }
+    #title-panel .subtitle {
+      font-size: 11px;
+      color: rgba(200, 195, 230, 0.5);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    #stats-box {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 11px;
+    }
+    .stat-label { color: rgba(200, 195, 230, 0.5); }
+    .stat-value {
+      font-weight: 600;
+      color: #c4b5fd;
+      font-size: 12px;
+    }
+    .stat-peak-click {
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .stat-peak-click:hover { color: #e9d5ff; }
+
+    /* Legend — top right */
+    #legend-panel {
+      top: 20px;
+      right: 20px;
+      padding: 14px 16px;
+      width: 196px;
+    }
+    .legend-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(200,195,230,0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+    }
+    #legend-gradient {
+      width: 100%;
+      height: 10px;
+      border-radius: 5px;
+      margin-bottom: 5px;
+    }
+    .legend-axis {
+      position: relative;
+      height: 18px;
+    }
+    .legend-tick {
+      position: absolute;
+      font-size: 9px;
+      color: rgba(200,195,230,0.45);
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+    .legend-note {
+      margin-top: 10px;
+      font-size: 10px;
+      color: rgba(200,195,230,0.35);
+      line-height: 1.5;
+    }
+
+    /* Colormap swatches */
+    .cmap-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(200,195,230,0.45);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin: 12px 0 6px;
+    }
+    #cmap-swatches {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+    .cmap-swatch {
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: border-color 0.15s, transform 0.1s;
+    }
+    .cmap-swatch:hover { transform: scale(1.03); }
+    .cmap-swatch.active { border-color: rgba(255,255,255,0.55); }
+    .cmap-swatch-bar {
+      height: 8px;
+      width: 100%;
+    }
+    .cmap-swatch-label {
+      font-size: 9px;
+      color: rgba(200,195,230,0.55);
+      text-align: center;
+      padding: 3px 0 4px;
+      background: rgba(255,255,255,0.04);
+      line-height: 1;
+    }
+
+    /* Campus activity waveform (above slider) */
+    #campus-wave-wrap {
+      position: relative;
+      width: 100%;
+      height: 36px;
+    }
+    #campus-wave {
+      display: block;
+      width: 100%;
+      height: 36px;
+    }
+
+    /* Controls — centered bottom */
+    #controls-panel {
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(680px, calc(100vw - 40px));
+      padding: 14px 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .controls-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #d0ccee;
+      border-radius: 8px;
+      padding: 6px 13px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 500;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+      line-height: 1;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.13);
+      color: #f0eeff;
+    }
+    .btn.active {
+      background: rgba(124, 58, 237, 0.45);
+      border-color: rgba(168, 85, 247, 0.7);
+      color: #e9d5ff;
+    }
+    #btn-play {
+      font-size: 14px;
+      padding: 6px 14px;
+      min-width: 40px;
+      text-align: center;
+    }
+
+    .time-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+    #time-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #c4b5fd;
+      letter-spacing: 0.3px;
+    }
+    #step-counter {
+      font-size: 10px;
+      color: rgba(200, 195, 230, 0.35);
+    }
+
+    .controls-bottom {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .slider-edge-label {
+      font-size: 10px;
+      color: rgba(200, 195, 230, 0.4);
+      white-space: nowrap;
+      min-width: 38px;
+    }
+    .slider-edge-label:last-child { text-align: right; }
+
+    #time-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: linear-gradient(
+        to right,
+        #7c3aed 0%,
+        #7c3aed var(--pct, 0%),
+        rgba(255,255,255,0.12) var(--pct, 0%),
+        rgba(255,255,255,0.12) 100%
+      );
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    #time-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #a855f7;
+      border-radius: 50%;
+      border: 2px solid rgba(240, 238, 255, 0.9);
+      cursor: pointer;
+      transition: transform 0.12s;
+      box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+    }
+    #time-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    #time-slider::-moz-range-thumb {
+      width: 14px; height: 14px;
+      background: #a855f7;
+      border-radius: 50%;
+      border: 2px solid rgba(240,238,255,0.9);
+      cursor: pointer;
+    }
+
+    /* Tooltip */
+    #tooltip-box {
+      position: fixed;
+      background: rgba(8, 8, 20, 0.93);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      border-radius: 10px;
+      padding: 10px 13px;
+      font-size: 12px;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      color: #e0e0f0;
+      pointer-events: none;
+      z-index: 2000;
+      display: none;
+      max-width: 190px;
+      line-height: 1.7;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .tt-oid {
+      font-weight: 700;
+      color: #c4b5fd;
+      margin-bottom: 3px;
+      font-size: 13px;
+    }
+    .tt-dim { color: rgba(200, 195, 230, 0.45); font-size: 10px; margin-top: 3px; }
+
+    /* Time Series Panel — bottom right */
+    #ts-panel {
+      bottom: 24px;
+      right: 20px;
+      width: 390px;
+      padding: 0;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    #ts-panel.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+    #ts-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    #ts-edge-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f0eeff;
+    }
+    #ts-edge-meta {
+      font-size: 10px;
+      color: rgba(200,195,230,0.45);
+      margin-top: 1px;
+    }
+    #ts-close {
+      background: none;
+      border: none;
+      color: rgba(200,195,230,0.4);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+      font-family: inherit;
+      transition: color 0.15s;
+    }
+    #ts-close:hover { color: #e0e0f0; }
+    #ts-chart-wrap {
+      padding: 4px 14px 0;
+    }
+    #ts-chart {
+      display: block;
+      width: 100%;
+      overflow: visible;
+    }
+    #ts-footer {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 14px 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .ts-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .ts-stat-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: rgba(200,195,230,0.4);
+    }
+    .ts-stat-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: #c4b5fd;
+    }
+    .ts-stat-value.now { color: #f9a8d4; }
+
+    /* Loading overlay */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: #0d0d1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 9999;
+      transition: opacity 0.4s;
+    }
+    #loading.fade-out { opacity: 0; pointer-events: none; }
+    .loading-text {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: rgba(200, 195, 230, 0.6);
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+    .loading-dot {
+      width: 8px; height: 8px;
+      background: #7c3aed;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; background: #a855f7; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; background: #c084fc; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.6); opacity: 0.4; }
+      50% { transform: scale(1); opacity: 1; }
+    }
+    .loading-dots { display: flex; gap: 8px; }
+  </style>
+</head>
+<body>
+
+  <div id="loading">
+    <div class="loading-dots">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+    <div class="loading-text">Loading campus network&hellip;</div>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="title-panel" class="panel">
+    <h1>GT Campus<br>Pedestrian Flow</h1>
+    <div class="subtitle">1,493 edges &middot; 288 time steps<br>10-minute bins &middot; Apr 13–15 2025</div>
+    <div id="stats-box">
+      <div class="stat-row">
+        <span class="stat-label">Active edges</span>
+        <span class="stat-value" id="stat-active">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label" id="stat-total-label">Edge traversals</span>
+        <span class="stat-value" id="stat-total">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label" id="stat-per-edge-label" title="Mean among active edges">Per edge</span>
+        <span class="stat-value" id="stat-per-edge">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Busiest edge</span>
+        <span class="stat-value stat-peak-click" id="stat-peak" title="Click to zoom to edge">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="legend-panel" class="panel">
+    <div class="legend-title" id="legend-metric-title">Traversals / 10 min</div>
+    <div id="legend-gradient"></div>
+    <div class="legend-axis" id="legend-axis"></div>
+    <div class="legend-note" id="legend-note">log scale &middot; max: __GLOBAL_MAX__</div>
+    <div class="cmap-section-title">Metric</div>
+    <div class="btn-group metric-toggle" style="margin-bottom:8px">
+      <button class="btn metric-btn active" data-metric="count" title="Raw traversals per edge per 10 min">Count</button>
+      <button class="btn metric-btn" data-metric="density" title="Traversals per foot of edge length">Density</button>
+    </div>
+    <div class="cmap-section-title">Scale</div>
+    <div class="btn-group scale-toggle" style="margin-bottom:6px">
+      <button class="btn scale-btn" data-scale="log">Log</button>
+      <button class="btn scale-btn active" data-scale="linear">Linear</button>
+    </div>
+    <button class="btn clip-btn active" id="btn-clip" title="Clip color scale to 1–99% range" style="margin-top:4px;width:100%">Clip 1–99%</button>
+    <div class="cmap-section-title">Colormap</div>
+    <div id="cmap-swatches"></div>
+  </div>
+
+  <div id="controls-panel" class="panel">
+    <div class="controls-top">
+      <div class="btn-group">
+        <button class="btn" id="btn-play" title="Play / Pause">&#9654;</button>
+        <button class="btn speed-btn active" data-speed="1">1&times;</button>
+        <button class="btn speed-btn"        data-speed="2">2&times;</button>
+        <button class="btn speed-btn"        data-speed="4">4&times;</button>
+      </div>
+      <div class="time-info">
+        <div id="time-label">Loading&hellip;</div>
+        <div id="step-counter">Step — / __N_STEPS__</div>
+      </div>
+    </div>
+    <div id="campus-wave-wrap">
+      <svg id="campus-wave" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="wave-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   id="wave-grad-top" stop-color="#ef4444" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
+          </linearGradient>
+          <clipPath id="wave-clip"><rect id="wave-clip-rect" x="0" y="0" width="100%" height="36"/></clipPath>
+        </defs>
+        <path id="wave-area" fill="url(#wave-grad)" clip-path="url(#wave-clip)"/>
+        <path id="wave-line" fill="none" stroke-width="1.2" clip-path="url(#wave-clip)"/>
+        <!-- x-axis midnight markers -->
+        <g id="wave-ticks"></g>
+        <!-- cursor -->
+        <line id="wave-cursor" y1="0" y2="36" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-dasharray="2,2"/>
+      </svg>
+    </div>
+    <div class="controls-bottom">
+      <span class="slider-edge-label">Apr 13</span>
+      <input type="range" id="time-slider" min="0" max="__N_STEPS_MINUS1__" value="0">
+      <span class="slider-edge-label">Apr 15</span>
+    </div>
+  </div>
+
+  <!-- Time Series Panel -->
+  <div id="ts-panel" class="panel">
+    <div id="ts-header">
+      <div>
+        <div id="ts-edge-title">Edge —</div>
+        <div id="ts-edge-meta">click an edge to inspect</div>
+      </div>
+      <button id="ts-close" title="Close">&#xD7;</button>
+    </div>
+    <div id="ts-chart-wrap">
+      <svg id="ts-chart" height="130" viewBox="0 0 362 130">
+        <defs>
+          <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#a855f7" stop-opacity="0.45"/>
+            <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="ts-line-grad" gradientUnits="userSpaceOnUse" x1="38" y1="0" x2="350" y2="0"/>
+          <clipPath id="chart-clip">
+            <rect id="clip-rect" x="38" y="8" width="312" height="96"/>
+          </clipPath>
+        </defs>
+        <!-- night bands (filled inside clip) -->
+        <g clip-path="url(#chart-clip)" id="night-bands"></g>
+        <!-- y grid lines -->
+        <g id="y-grid"></g>
+        <!-- area fill -->
+        <path id="ts-area" fill="url(#area-grad)" clip-path="url(#chart-clip)"/>
+        <!-- line stroke (colored by plasma) -->
+        <path id="ts-line" fill="none" stroke-width="1.5" clip-path="url(#chart-clip)"/>
+        <!-- x axis ticks + labels -->
+        <g id="x-axis"></g>
+        <!-- y axis labels -->
+        <g id="y-axis"></g>
+        <!-- cursor group (updated each frame) -->
+        <g id="ts-cursor-g" style="display:none">
+          <line id="ts-cursor-line" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-dasharray="3,3" y1="8" y2="104"/>
+          <circle id="ts-cursor-dot" r="4" fill="#f9a8d4" stroke="#0d0d1a" stroke-width="1.5"/>
+          <rect id="ts-cursor-bg" height="16" rx="3" fill="rgba(10,10,22,0.85)"/>
+          <text id="ts-cursor-val" fill="#f9a8d4" font-size="10" font-weight="700" text-anchor="middle" dy="11"></text>
+        </g>
+      </svg>
+    </div>
+    <div id="ts-footer">
+      <div class="ts-stat">
+        <span class="ts-stat-label">Now</span>
+        <span class="ts-stat-value now" id="ts-now">—</span>
+      </div>
+      <div class="ts-stat" style="text-align:center">
+        <span class="ts-stat-label">Peak</span>
+        <span class="ts-stat-value" id="ts-peak">—</span>
+      </div>
+      <div class="ts-stat" style="text-align:right">
+        <span class="ts-stat-label" id="ts-total-label">48 hr traversals</span>
+        <span class="ts-stat-value" id="ts-total">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="tooltip-box">
+    <div class="tt-oid" id="tt-oid"></div>
+    <div id="tt-count"></div>
+    <div class="tt-dim" id="tt-time"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+  // ============================================================
+  // EMBEDDED DATA  (tokens replaced by generate_viz.py)
+  // ============================================================
+  const GEO_DATA            = __GEO_JSON__;
+  const TS_B64              = '__TS_B64__';
+  const TS_B64_DENSITY      = '__TS_B64_DENSITY__';
+  const EDGE_LENGTHS_B64    = '__EDGE_LENGTHS_B64__';
+  const TS_LABELS           = __TS_LABELS__;
+  const CMAPS               = __CMAPS__;
+  const CAMPUS_TOTALS       = __CAMPUS_TOTALS__;
+  const CAMPUS_TOTALS_DENSITY = __CAMPUS_TOTALS_DENSITY__;
+  const N_EDGES             = __N_EDGES__;
+  const N_STEPS             = __N_STEPS__;
+  const GLOBAL_MAX          = __GLOBAL_MAX__;
+  const P1                  = __P1__;
+  const P99                 = __P99__;
+  const D_GLOBAL_MAX        = __GLOBAL_MAX_D__;
+  const D_P1                = __P1_D__;
+  const D_P99               = __P99_D__;
+
+  // ============================================================
+  // CONSTANTS
+  // ============================================================
+  const INACTIVE     = { color: '#2a2a3c', opacity: 0.22, weight: 1 };
+  const FRAME_MS     = 300;   // ms per step at 1× speed
+
+  let useDensity = false;
+
+  function scaleParams() {
+    if (useDensity) {
+      return {
+        gm: D_GLOBAL_MAX, p1: D_P1, p99: D_P99,
+        logMax: Math.log1p(D_GLOBAL_MAX), logP1: Math.log1p(D_P1), logP99: Math.log1p(D_P99),
+      };
+    }
+    return {
+      gm: GLOBAL_MAX, p1: P1, p99: P99,
+      logMax: Math.log1p(GLOBAL_MAX), logP1: Math.log1p(P1), logP99: Math.log1p(P99),
+    };
+  }
+
+  function getCampusTotals() {
+    return useDensity ? CAMPUS_TOTALS_DENSITY : CAMPUS_TOTALS;
+  }
+
+  function campusMaxNow() {
+    return Math.max(...getCampusTotals(), 1e-9);
+  }
+
+  function fmtLegendTick(v) {
+    if (!useDensity) return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v));
+    if (v >= 0.01) return v.toFixed(3);
+    if (v >= 0.001) return v.toFixed(4);
+    return v.toExponential(1);
+  }
+
+  function fmtMetric(v) {
+    if (!useDensity) return String(Math.round(v));
+    if (v >= 10) return v.toFixed(2);
+    if (v >= 0.1) return v.toFixed(3);
+    if (v >= 0.01) return v.toFixed(4);
+    return v.toExponential(2);
+  }
+
+  // ============================================================
+  // DECODE MATRICES  (row-major: time × edges)
+  // ============================================================
+  function decodeMatrix(b64) {
+    const binary = atob(b64);
+    const buf    = new ArrayBuffer(binary.length);
+    const bytes  = new Uint8Array(buf);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Int16Array(buf);
+  }
+
+  function decodeFloatMatrix(b64) {
+    const binary = atob(b64);
+    const buf    = new ArrayBuffer(binary.length);
+    const bytes  = new Uint8Array(buf);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Float32Array(buf);
+  }
+
+  function decodeLengths(b64) {
+    return decodeFloatMatrix(b64);
+  }
+
+  const MATRIX         = decodeMatrix(TS_B64);
+  const MATRIX_DENSITY = decodeFloatMatrix(TS_B64_DENSITY);
+  const LENGTHS        = decodeLengths(EDGE_LENGTHS_B64);
+
+  function mVal(step, i) {
+    const o = step * N_EDGES + i;
+    return useDensity ? MATRIX_DENSITY[o] : MATRIX[o];
+  }
+
+  function traversalsAt(step, i) {
+    const v = mVal(step, i);
+    return useDensity ? v * LENGTHS[i] : v;
+  }
+
+  // ============================================================
+  // COLOR SCALE  (switchable, log1p normalised)
+  // ============================================================
+  const CMAP_LABELS = { hot:'Hot', viridis:'Viridis', inferno:'Inferno', plasma:'Plasma', reds:'Reds', ylord:'YlOrRd' };
+  let activeCmap      = 'hot';
+  let activeCmapTable = CMAPS['hot'];
+  let useLog          = false;
+  let useClip         = true;
+
+  function cmapColor(t) {
+    const tbl = activeCmapTable;
+    if (t <= 0) return `rgb(${tbl[0].join(',')})`;
+    if (t >= 1) return `rgb(${tbl[19].join(',')})`;
+    const pos = t * 19;
+    const lo  = Math.floor(pos);
+    const f   = pos - lo;
+    const hi  = lo + 1;
+    const r = Math.round(tbl[lo][0] + f * (tbl[hi][0] - tbl[lo][0]));
+    const g = Math.round(tbl[lo][1] + f * (tbl[hi][1] - tbl[lo][1]));
+    const b = Math.round(tbl[lo][2] + f * (tbl[hi][2] - tbl[lo][2]));
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function normalize(v) {
+    if (v <= 0) return 0;
+    const sp = scaleParams();
+    const [lo, hi] = useClip
+      ? (useLog ? [sp.logP1, sp.logP99] : [sp.p1, sp.p99])
+      : (useLog ? [0, sp.logMax] : [0, sp.gm]);
+    const raw = useLog ? Math.log1p(v) : v;
+    const t = (raw - lo) / (hi - lo);
+    return Math.max(0, Math.min(1, t));
+  }
+
+  function selectCmap(name) {
+    activeCmap      = name;
+    activeCmapTable = CMAPS[name];
+    // Update legend gradient bar
+    updateLegendGradient();
+    // Update cmap swatch active state
+    document.querySelectorAll('.cmap-swatch').forEach(el => {
+      el.classList.toggle('active', el.dataset.cmap === name);
+    });
+    // Update campus waveform line color
+    const topColor = `rgb(${activeCmapTable[19].join(',')})`;
+    document.getElementById('wave-grad-top').setAttribute('stop-color', topColor);
+    document.getElementById('wave-line').setAttribute('stroke', topColor);
+    // Re-render current frame so edges update immediately
+    updateFrame(currentStep);
+    // If ts panel is open, update its line color too
+    if (selectedEdgeIdx !== null) rebuildTsGradient();
+  }
+
+  // ============================================================
+  // LEAFLET MAP + CANVAS RENDERER
+  // ============================================================
+  const renderer = L.canvas({ padding: 0.2 });
+  const map = L.map('map', {
+    center: [33.77811, -84.39682],
+    zoom: 15,
+    preferCanvas: true,
+    renderer: renderer,
+    zoomControl: true,
+    attributionControl: true
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
+  }).addTo(map);
+
+  // ============================================================
+  // BUILD POLYLINES  (one per edge, Canvas renderer)
+  // ============================================================
+  const polylines = new Array(N_EDGES);
+
+  GEO_DATA.forEach((edge, i) => {
+    const latlngs = edge.c.map(([lon, lat]) => [lat, lon]);
+    const pl = L.polyline(latlngs, {
+      ...INACTIVE,
+      renderer: renderer,
+      interactive: true
+    });
+    pl._edgeIdx = i;
+    pl._oid     = edge.oid;
+    pl.on('mouseover', onHover);
+    pl.on('mouseout',  onOut);
+    pl.on('mousemove', onMove);
+    pl.on('click',     onEdgeClick);
+    pl.addTo(map);
+    polylines[i] = pl;
+  });
+
+  // ============================================================
+  // FRAME UPDATE
+  // ============================================================
+  let currentStep = 0;
+  let lastPeakEdgeIdx = null;
+
+  function updateFrame(step) {
+    currentStep = step;
+
+    let active = 0, total = 0, peak = 0, peakOid = 0, peakEdgeIdx = null;
+
+    for (let i = 0; i < N_EDGES; i++) {
+      const count = mVal(step, i);
+      if (count <= 0) {
+        polylines[i].setStyle(INACTIVE);
+      } else {
+        const t      = normalize(count);
+        const color  = cmapColor(t);
+        const weight = 1.5 + 3.5 * t;
+        polylines[i].setStyle({ color, opacity: 0.88, weight });
+        active++;
+        total += traversalsAt(step, i);
+        if (count > peak) { peak = count; peakOid = GEO_DATA[i].oid; peakEdgeIdx = i; }
+      }
+    }
+    lastPeakEdgeIdx = peakEdgeIdx;
+
+    // Update DOM
+    const pct = (step / (N_STEPS - 1) * 100).toFixed(2);
+    const slider = document.getElementById('time-slider');
+    slider.style.setProperty('--pct', pct + '%');
+
+    document.getElementById('time-label').textContent  = TS_LABELS[step];
+    document.getElementById('step-counter').textContent = `Step ${step + 1} / ${N_STEPS}`;
+    let perEdgeDisp = '—';
+    if (active > 0) {
+      let s = 0;
+      for (let i = 0; i < N_EDGES; i++) {
+        const c = mVal(step, i);
+        if (c > 0) s += c;
+      }
+      perEdgeDisp = (s / active).toFixed(useDensity ? 4 : 1);
+    }
+    document.getElementById('stat-active').textContent = active.toLocaleString();
+    document.getElementById('stat-total').textContent  = Math.round(total).toLocaleString();
+    document.getElementById('stat-per-edge').textContent = perEdgeDisp;
+    document.getElementById('stat-peak').textContent   = peakOid
+      ? `#${peakOid} (${fmtMetric(peak)})`
+      : '—';
+
+    if (selectedEdgeIdx !== null) updateCursor(step);
+    if (hoveredEdgeIdx !== null) updateTooltipContent();
+    updateWaveCursor(step);
+  }
+
+  // ============================================================
+  // ANIMATION LOOP
+  // ============================================================
+  let isPlaying   = false;
+  let speedMult   = 1;
+  let lastTime    = null;
+  let rafHandle   = null;
+
+  function animLoop(ts) {
+    if (!isPlaying) return;
+    if (lastTime === null) lastTime = ts;
+    const elapsed = ts - lastTime;
+    if (elapsed >= FRAME_MS / speedMult) {
+      lastTime = ts;
+      const next = (currentStep + 1) % N_STEPS;
+      updateFrame(next);
+      document.getElementById('time-slider').value = next;
+    }
+    rafHandle = requestAnimationFrame(animLoop);
+  }
+
+  function play() {
+    if (isPlaying) return;
+    isPlaying = true;
+    lastTime  = null;
+    rafHandle = requestAnimationFrame(animLoop);
+    const btn = document.getElementById('btn-play');
+    btn.innerHTML = '&#9646;&#9646;';
+    btn.classList.add('active');
+  }
+
+  function pause() {
+    isPlaying = false;
+    if (rafHandle) { cancelAnimationFrame(rafHandle); rafHandle = null; }
+    const btn = document.getElementById('btn-play');
+    btn.innerHTML = '&#9654;';
+    btn.classList.remove('active');
+  }
+
+  // ============================================================
+  // TOOLTIP
+  // ============================================================
+  const tooltip = document.getElementById('tooltip-box');
+  let hoveredEdgeIdx = null;
+
+  function updateTooltipContent() {
+    if (hoveredEdgeIdx === null) return;
+    const i = hoveredEdgeIdx;
+    const v = mVal(currentStep, i);
+    const tr = traversalsAt(currentStep, i);
+    document.getElementById('tt-oid').textContent   = `Edge ${GEO_DATA[i].oid}`;
+    document.getElementById('tt-count').textContent = useDensity
+      ? `${fmtMetric(v)} /ft · ${Math.round(tr)} traversal${tr !== 1 ? 's' : ''}`
+      : `${Math.round(tr)} traversal${tr !== 1 ? 's' : ''}`;
+    document.getElementById('tt-time').textContent  = TS_LABELS[currentStep];
+  }
+
+  function onHover(e) {
+    hoveredEdgeIdx = e.target._edgeIdx;
+    updateTooltipContent();
+    tooltip.style.display = 'block';
+    const count = mVal(currentStep, hoveredEdgeIdx);
+    if (count > 0) e.target.setStyle({ opacity: 1.0 });
+  }
+
+  function onOut(e) {
+    hoveredEdgeIdx = null;
+    tooltip.style.display = 'none';
+    const i     = e.target._edgeIdx;
+    const count = mVal(currentStep, i);
+    e.target.setStyle({ opacity: count > 0 ? 0.88 : 0.22 });
+  }
+
+  function onMove(e) {
+    const x = e.originalEvent.clientX;
+    const y = e.originalEvent.clientY;
+    const TW = 192, TH = 76;
+    tooltip.style.left = (x + 16 + TW > window.innerWidth  ? x - TW - 8  : x + 16) + 'px';
+    tooltip.style.top  = (y + 16 + TH > window.innerHeight ? y - TH - 8  : y + 16) + 'px';
+  }
+
+  // ============================================================
+  // TIME SERIES PANEL
+  // ============================================================
+  // Chart geometry constants (must match SVG viewBox / clip-rect)
+  const ML = 38, MR = 10, MT = 8, MB = 26;
+  const SVG_W = 362, SVG_H = 130;
+  const CW = SVG_W - ML - MR;   // 314
+  const CH = SVG_H - MT - MB;   // 96
+
+  let selectedEdgeIdx = null;
+  let selectedPolyline = null;
+  let edgeCounts = null;   // Float32Array, length N_STEPS, for the open edge
+  let edgeMax    = 1;
+
+  // Time bin positions for x-axis landmarks
+  // Data starts Apr 13 20:00 EDT (UTC-4).  Each bin = 10 min.
+  // Midnight Apr 14 EDT  = bin 24   (4h × 6)
+  // Noon     Apr 14 EDT  = bin 96   (16h × 6)
+  // Midnight Apr 15 EDT  = bin 168  (28h × 6)
+  // Noon     Apr 15 EDT  = bin 240  (40h × 6)
+  const X_TICKS = [
+    { bin: 0,   label: '8 PM\nApr 13' },
+    { bin: 24,  label: 'Midnight' },
+    { bin: 96,  label: 'Noon\nApr 14' },
+    { bin: 168, label: 'Midnight' },
+    { bin: 240, label: 'Noon\nApr 15' },
+    { bin: 287, label: '8 PM' },
+  ];
+  // Night bands: 8PM-midnight (0-23) and 10PM Apr14-6AM Apr15 (132-204)
+  const NIGHT_BANDS = [
+    { start: 0,   end: 24  },   // eve of Apr 13
+    { start: 132, end: 192 },   // night of Apr 14→15
+  ];
+
+  function binToX(bin) {
+    return ML + (bin / (N_STEPS - 1)) * CW;
+  }
+
+  function countToY(count) {
+    return MT + CH - (count / edgeMax) * CH;
+  }
+
+  function buildAreaPath() {
+    // Area fill: close at bottom
+    let d = `M ${binToX(0).toFixed(1)},${(MT + CH).toFixed(1)}`;
+    for (let t = 0; t < N_STEPS; t++) {
+      d += ` L ${binToX(t).toFixed(1)},${countToY(edgeCounts[t]).toFixed(1)}`;
+    }
+    d += ` L ${binToX(N_STEPS - 1).toFixed(1)},${(MT + CH).toFixed(1)} Z`;
+    return d;
+  }
+
+  function buildLinePath() {
+    let d = `M ${binToX(0).toFixed(1)},${countToY(edgeCounts[0]).toFixed(1)}`;
+    for (let t = 1; t < N_STEPS; t++) {
+      d += ` L ${binToX(t).toFixed(1)},${countToY(edgeCounts[t]).toFixed(1)}`;
+    }
+    return d;
+  }
+
+  function rebuildTsGradient() {
+    if (edgeCounts === null) return;
+    const svg = document.getElementById('ts-chart');
+    const grad = svg.querySelector('#ts-line-grad');
+    grad.setAttribute('x1', String(ML));
+    grad.setAttribute('x2', String(ML + CW));
+    grad.innerHTML = '';
+    for (let t = 0; t < N_STEPS; t++) {
+      const stop = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      stop.setAttribute('offset', (t / (N_STEPS - 1)).toFixed(4));
+      stop.setAttribute('stop-color', cmapColor(normalize(edgeCounts[t])));
+      grad.appendChild(stop);
+    }
+  }
+
+  function svgEl(tag, attrs) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    return el;
+  }
+
+  function openTimeSeries(edgeIdx, oid) {
+    // De-select previous
+    if (selectedPolyline) {
+      const prevCount = mVal(currentStep, selectedEdgeIdx);
+      const prevT = normalize(prevCount);
+      if (prevCount <= 0) {
+        selectedPolyline.setStyle(INACTIVE);
+      } else {
+        selectedPolyline.setStyle({ color: cmapColor(prevT), opacity: 0.88, weight: 1.5 + 3.5 * prevT });
+      }
+    }
+
+    // Extract this edge's time series (density or count per bin)
+    const len = LENGTHS[edgeIdx];
+    edgeCounts = new Float32Array(N_STEPS);
+    let total = 0, peak = 0, peakStep = 0;
+    for (let t = 0; t < N_STEPS; t++) {
+      const v = mVal(t, edgeIdx);
+      edgeCounts[t] = v;
+      total += useDensity ? v * len : v;
+      if (v > peak) { peak = v; peakStep = t; }
+    }
+    edgeMax = Math.max(peak, useDensity ? 1e-9 : 1);
+
+    selectedEdgeIdx = edgeIdx;
+    selectedPolyline = polylines[edgeIdx];
+
+    // Highlight selected edge: white outline
+    selectedPolyline.setStyle({ color: '#ffffff', opacity: 1.0, weight: 4 });
+
+    // Update panel header
+    const meta = GEO_DATA[edgeIdx];
+    document.getElementById('ts-edge-title').textContent = `Edge #${oid}`;
+    document.getElementById('ts-edge-meta').textContent  =
+      `${(meta.c.length - 1)} segment${meta.c.length > 2 ? 's' : ''}`;
+
+    // Footer stats (total = sum of traversals over 48h)
+    document.getElementById('ts-peak').textContent  =
+      `${fmtMetric(peak)} @ ${TS_LABELS[peakStep].split(', ')[1]}`;
+    document.getElementById('ts-total').textContent = Math.round(total).toLocaleString();
+
+    // Rebuild SVG chart
+    const svg = document.getElementById('ts-chart');
+
+    // Night bands
+    const nightG = document.getElementById('night-bands');
+    nightG.innerHTML = '';
+    NIGHT_BANDS.forEach(({ start, end }) => {
+      nightG.appendChild(svgEl('rect', {
+        x: binToX(start).toFixed(1),
+        y: MT,
+        width: (binToX(end) - binToX(start)).toFixed(1),
+        height: CH,
+        fill: 'rgba(0,0,0,0.3)'
+      }));
+    });
+
+    // Y grid lines (3 levels)
+    const yGridG = document.getElementById('y-grid');
+    yGridG.innerHTML = '';
+    const yGridVals = [edgeMax * 0.5, edgeMax];
+    yGridVals.forEach(val => {
+      const y = countToY(val).toFixed(1);
+      yGridG.appendChild(svgEl('line', {
+        x1: ML, x2: ML + CW, y1: y, y2: y,
+        stroke: 'rgba(255,255,255,0.07)', 'stroke-width': 1
+      }));
+    });
+
+    // Y axis labels
+    const yAxisG = document.getElementById('y-axis');
+    yAxisG.innerHTML = '';
+    [0, edgeMax * 0.5, edgeMax].forEach(val => {
+      const y = countToY(val).toFixed(1);
+      const t = yAxisG.appendChild(svgEl('text', {
+        x: ML - 4, y, fill: 'rgba(200,195,230,0.4)',
+        'font-size': 9, 'text-anchor': 'end', dy: '0.35em'
+      }));
+      t.textContent = useDensity ? fmtMetric(val) : (val >= 1000 ? `${(val/1000).toFixed(1)}k` : String(Math.round(val)));
+    });
+
+    // X axis ticks + labels
+    const xAxisG = document.getElementById('x-axis');
+    xAxisG.innerHTML = '';
+    // Axis baseline
+    xAxisG.appendChild(svgEl('line', {
+      x1: ML, x2: ML + CW, y1: MT + CH, y2: MT + CH,
+      stroke: 'rgba(255,255,255,0.1)', 'stroke-width': 1
+    }));
+    X_TICKS.forEach(({ bin, label }) => {
+      const x = binToX(bin).toFixed(1);
+      xAxisG.appendChild(svgEl('line', {
+        x1: x, x2: x, y1: MT + CH, y2: MT + CH + 4,
+        stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1
+      }));
+      // Multi-line labels: split on '\n'
+      const lines = label.split('\n');
+      lines.forEach((line, li) => {
+        const txt = xAxisG.appendChild(svgEl('text', {
+          x, y: MT + CH + 8 + li * 10,
+          fill: 'rgba(200,195,230,0.4)',
+          'font-size': 9, 'text-anchor': 'middle', dy: '0.7em'
+        }));
+        txt.textContent = line;
+      });
+    });
+
+    // Area + line — color by value along x-axis
+    rebuildTsGradient();
+
+    const tsLine = document.getElementById('ts-line');
+    tsLine.setAttribute('d', buildLinePath());
+    tsLine.setAttribute('stroke', 'url(#ts-line-grad)');
+    document.getElementById('ts-area').setAttribute('fill', 'none');
+
+    // Show panel with animation
+    document.getElementById('ts-panel').classList.add('visible');
+
+    // Initial cursor position
+    updateCursor(currentStep);
+  }
+
+  function updateCursor(step) {
+    const count = edgeCounts[step];
+    const x = binToX(step);
+    const y = countToY(count);
+
+    const cursorG = document.getElementById('ts-cursor-g');
+    cursorG.style.display = 'block';
+
+    document.getElementById('ts-cursor-line').setAttribute('x1', x.toFixed(1));
+    document.getElementById('ts-cursor-line').setAttribute('x2', x.toFixed(1));
+
+    const dot = document.getElementById('ts-cursor-dot');
+    dot.setAttribute('cx', x.toFixed(1));
+    dot.setAttribute('cy', y.toFixed(1));
+
+    // Value label — flip sides if near right edge
+    const labelX = x + 22 > ML + CW ? x - 22 : x + 22;
+    const valEl  = document.getElementById('ts-cursor-val');
+    valEl.setAttribute('x', labelX.toFixed(1));
+    valEl.setAttribute('y', Math.max(MT + 6, Math.min(y, MT + CH - 4)).toFixed(1));
+    const disp = fmtMetric(count);
+    valEl.textContent = disp;
+
+    const bgEl = document.getElementById('ts-cursor-bg');
+    const valW = Math.max(24, disp.length * 6 + 8);
+    bgEl.setAttribute('x', (labelX - valW / 2).toFixed(1));
+    bgEl.setAttribute('y', (parseFloat(valEl.getAttribute('y')) - 11).toFixed(1));
+    bgEl.setAttribute('width', valW);
+
+    document.getElementById('ts-now').textContent = disp;
+  }
+
+  function closeTimeSeries() {
+    // Restore selected edge to normal style
+    if (selectedPolyline && selectedEdgeIdx !== null) {
+      const count = mVal(currentStep, selectedEdgeIdx);
+      const t = normalize(count);
+      if (count <= 0) selectedPolyline.setStyle(INACTIVE);
+      else selectedPolyline.setStyle({ color: cmapColor(t), opacity: 0.88, weight: 1.5 + 3.5 * t });
+    }
+    selectedEdgeIdx  = null;
+    selectedPolyline = null;
+    edgeCounts       = null;
+
+    document.getElementById('ts-panel').classList.remove('visible');
+    document.getElementById('ts-cursor-g').style.display = 'none';
+  }
+
+  function onEdgeClick(e) {
+    L.DomEvent.stopPropagation(e);
+    openTimeSeries(e.target._edgeIdx, e.target._oid);
+  }
+
+  // ============================================================
+  // LEGEND + COLORMAP SWATCHES
+  // ============================================================
+  function cmapCssGradient(tbl) {
+    // 5-stop CSS gradient from a 20-stop table
+    const idxs = [0, 5, 10, 15, 19];
+    const stops = idxs.map((i, j) => `rgb(${tbl[i].join(',')}) ${(j / (idxs.length - 1) * 100).toFixed(0)}%`);
+    return `linear-gradient(to right, ${stops.join(', ')})`;
+  }
+
+  function updateLegendGradient() {
+    document.getElementById('legend-gradient').style.background = cmapCssGradient(activeCmapTable);
+  }
+
+  function updateLegendAxis() {
+    const axis = document.getElementById('legend-axis');
+    axis.innerHTML = '';
+    const sp = scaleParams();
+    const mid = (sp.p1 + sp.p99) / 2;
+    const ticks = useClip
+      ? (useLog ? [sp.p1, mid, sp.p99] : [sp.p1, mid, sp.p99])
+      : (useLog
+        ? [0, sp.gm * 0.25, sp.gm * 0.5, sp.gm * 0.75, sp.gm]
+        : [0, sp.gm * 0.25, sp.gm * 0.5, sp.gm * 0.75, sp.gm]);
+    const [lo, hi] = useClip
+      ? (useLog ? [sp.logP1, sp.logP99] : [sp.p1, sp.p99])
+      : (useLog ? [0, sp.logMax] : [0, sp.gm]);
+    ticks.forEach(val => {
+      const raw = val > 0 ? (useLog ? Math.log1p(val) : val) : lo;
+      const t = (raw - lo) / (hi - lo);
+      const span = document.createElement('span');
+      span.className = 'legend-tick';
+      span.textContent = fmtLegendTick(val);
+      span.style.left  = (Math.max(0, Math.min(1, t)) * 100).toFixed(1) + '%';
+      axis.appendChild(span);
+    });
+    const note = (useLog ? 'log' : 'linear') + (useClip
+      ? ` · clip ${fmtLegendTick(sp.p1)}–${fmtLegendTick(sp.p99)}`
+      : ' · max: ' + fmtLegendTick(sp.gm));
+    document.getElementById('legend-note').textContent = note;
+  }
+
+  function setScale(mode) {
+    useLog = mode === 'log';
+    document.querySelectorAll('.scale-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.scale === mode);
+    });
+    updateLegendAxis();
+    updateFrame(currentStep);
+    if (selectedEdgeIdx !== null) rebuildTsGradient();
+  }
+
+  function setMetric(metric) {
+    useDensity = metric === 'density';
+    document.querySelectorAll('.metric-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.metric === metric);
+    });
+    document.getElementById('legend-metric-title').textContent = useDensity
+      ? 'Traversals / ft·10 min'
+      : 'Traversals / 10 min';
+    document.getElementById('stat-total-label').textContent = useDensity
+      ? 'Total traversals (step)'
+      : 'Edge traversals';
+    document.getElementById('stat-per-edge-label').title = useDensity
+      ? 'Mean traversals per foot on active edges'
+      : 'Mean traversals per active edge';
+    document.getElementById('ts-total-label').textContent = '48 hr traversals';
+    updateLegendAxis();
+    updateFrame(currentStep);
+    buildCampusWave();
+    if (selectedEdgeIdx !== null) {
+      openTimeSeries(selectedEdgeIdx, GEO_DATA[selectedEdgeIdx].oid);
+    }
+  }
+
+  function buildLegend() {
+    updateLegendGradient();
+    updateLegendAxis();
+
+    // Colormap swatches
+    const container = document.getElementById('cmap-swatches');
+    Object.entries(CMAP_LABELS).forEach(([key, label]) => {
+      const tbl = CMAPS[key];
+      const div = document.createElement('div');
+      div.className = 'cmap-swatch' + (key === activeCmap ? ' active' : '');
+      div.dataset.cmap = key;
+      div.innerHTML = `
+        <div class="cmap-swatch-bar" style="background:${cmapCssGradient(tbl)}"></div>
+        <div class="cmap-swatch-label">${label}</div>
+      `;
+      div.addEventListener('click', () => selectCmap(key));
+      container.appendChild(div);
+    });
+  }
+
+  // ============================================================
+  // CAMPUS ACTIVITY WAVEFORM
+  // ============================================================
+  function buildCampusWave() {
+    const svg     = document.getElementById('campus-wave');
+    const W       = svg.clientWidth  || 600;
+    const H       = 36;
+    const padL    = 0, padR = 0, padT = 3, padB = 1;
+    const cw      = W - padL - padR;
+    const ch      = H - padT - padB;
+    const totals  = getCampusTotals();
+    const cmax    = campusMaxNow();
+
+    function bx(bin) { return padL + (bin / (N_STEPS - 1)) * cw; }
+    function by(val) { return padT + ch - (val / cmax) * ch; }
+
+    // Area path
+    let area = `M ${bx(0).toFixed(1)},${H}`;
+    for (let t = 0; t < N_STEPS; t++) {
+      area += ` L ${bx(t).toFixed(1)},${by(totals[t]).toFixed(1)}`;
+    }
+    area += ` L ${bx(N_STEPS - 1).toFixed(1)},${H} Z`;
+    document.getElementById('wave-area').setAttribute('d', area);
+
+    // Line path
+    let line = `M ${bx(0).toFixed(1)},${by(totals[0]).toFixed(1)}`;
+    for (let t = 1; t < N_STEPS; t++) {
+      line += ` L ${bx(t).toFixed(1)},${by(totals[t]).toFixed(1)}`;
+    }
+    document.getElementById('wave-line').setAttribute('d', line);
+
+    // Set initial color from active cmap top
+    const topColor = `rgb(${activeCmapTable[19].join(',')})`;
+    document.getElementById('wave-grad-top').setAttribute('stop-color', topColor);
+    document.getElementById('wave-line').setAttribute('stroke', topColor);
+
+    // Midnight tick markers (bins 24 and 168)
+    const ticksG = document.getElementById('wave-ticks');
+    [24, 168].forEach(bin => {
+      const x = bx(bin).toFixed(1);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x); line.setAttribute('x2', x);
+      line.setAttribute('y1', 0); line.setAttribute('y2', H);
+      line.setAttribute('stroke', 'rgba(255,255,255,0.12)');
+      line.setAttribute('stroke-width', '1');
+      line.setAttribute('stroke-dasharray', '2,2');
+      ticksG.appendChild(line);
+    });
+
+    // Initial cursor
+    updateWaveCursor(currentStep);
+  }
+
+  function updateWaveCursor(step) {
+    const svg = document.getElementById('campus-wave');
+    const W   = svg.clientWidth || 600;
+    const x   = ((step / (N_STEPS - 1)) * W).toFixed(1);
+    document.getElementById('wave-cursor').setAttribute('x1', x);
+    document.getElementById('wave-cursor').setAttribute('x2', x);
+  }
+
+  // ============================================================
+  // WIRING UP CONTROLS
+  // ============================================================
+  document.getElementById('btn-play').addEventListener('click', () => {
+    if (isPlaying) pause(); else play();
+  });
+
+  document.getElementById('stat-peak').addEventListener('click', () => {
+    if (lastPeakEdgeIdx === null) return;
+    const bounds = polylines[lastPeakEdgeIdx].getBounds();
+    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 18 });
+  });
+
+  const slider = document.getElementById('time-slider');
+  slider.addEventListener('input', function () {
+    pause();
+    updateFrame(parseInt(this.value));
+  });
+
+  document.getElementById('ts-close').addEventListener('click', closeTimeSeries);
+  map.on('click', () => { if (selectedEdgeIdx !== null) closeTimeSeries(); });
+
+  document.querySelectorAll('.speed-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      speedMult = parseInt(this.dataset.speed);
+      document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      lastTime = null;  // reset frame timer
+    });
+  });
+
+  document.querySelectorAll('.scale-btn').forEach(btn => {
+    btn.addEventListener('click', () => setScale(btn.dataset.scale));
+  });
+
+  document.querySelectorAll('.metric-btn').forEach(btn => {
+    btn.addEventListener('click', () => setMetric(btn.dataset.metric));
+  });
+
+  document.getElementById('btn-clip').addEventListener('click', function () {
+    useClip = !useClip;
+    this.classList.toggle('active', useClip);
+    updateLegendAxis();
+    updateFrame(currentStep);
+    if (selectedEdgeIdx !== null) rebuildTsGradient();
+  });
+
+  // ============================================================
+  // INIT
+  // ============================================================
+  (function init() {
+    buildLegend();
+    updateFrame(0);
+    // Campus waveform needs rendered width — defer one tick
+    setTimeout(buildCampusWave, 0);
+
+    // Hide loading overlay once map tiles are ready
+    map.once('load', hideLoading);
+    setTimeout(hideLoading, 1800);  // fallback
+
+    function hideLoading() {
+      const overlay = document.getElementById('loading');
+      if (overlay) {
+        overlay.classList.add('fade-out');
+        setTimeout(() => overlay.remove(), 500);
+      }
+    }
+
+    // Auto-play after a short delay
+    setTimeout(play, 1200);
+  })();
+  </script>
+</body>
+</html>

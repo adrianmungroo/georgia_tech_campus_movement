@@ -1,0 +1,12 @@
+# Large / generated data
+*.parquet
+
+# Internal-only project areas (not for the public repo)
+simon/
+visualizations/
+misc/
+
+# Python / Jupyter noise
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
