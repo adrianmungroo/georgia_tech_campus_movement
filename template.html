@@ -7,8 +7,101 @@
   <link rel="icon" type="image/svg+xml" href="./favicon/favicon.svg">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
+    :root {
+      --page-bg: #0d0d1a;
+      --panel-bg: rgba(10, 10, 22, 0.84);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --panel-text: #e0e0f0;
+      --title: #f0eeff;
+      --subtitle: rgba(200, 195, 230, 0.5);
+      --divider: rgba(255,255,255,0.07);
+      --muted: rgba(200, 195, 230, 0.5);
+      --muted-2: rgba(200, 195, 230, 0.35);
+      --muted-3: rgba(200, 195, 230, 0.45);
+      --muted-4: rgba(200, 195, 230, 0.4);
+      --accent: #c4b5fd;
+      --accent-hover: #e9d5ff;
+      --legend-title: rgba(200,195,230,0.7);
+      --btn-bg: rgba(255, 255, 255, 0.07);
+      --btn-border: rgba(255, 255, 255, 0.12);
+      --btn-text: #d0ccee;
+      --btn-hover-bg: rgba(255, 255, 255, 0.13);
+      --btn-hover-text: #f0eeff;
+      --btn-active-bg: rgba(124, 58, 237, 0.45);
+      --btn-active-border: rgba(168, 85, 247, 0.7);
+      --btn-active-text: #e9d5ff;
+      --slider-track-empty: rgba(255,255,255,0.12);
+      --slider-thumb-border: rgba(240, 238, 255, 0.9);
+      --tooltip-bg: rgba(8, 8, 20, 0.93);
+      --tooltip-border: rgba(168, 85, 247, 0.35);
+      --tooltip-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      --cmap-label-bg: rgba(255,255,255,0.04);
+      --cmap-active-border: rgba(255,255,255,0.55);
+      --basemap-track: rgba(255,255,255,0.12);
+      --basemap-track-border: rgba(255,255,255,0.14);
+      --basemap-thumb: #e0e0f0;
+      --loading-bg: #0d0d1a;
+      --loading-text: rgba(200, 195, 230, 0.6);
+      --wave-cursor-stroke: rgba(255,255,255,0.5);
+      --wave-tick-stroke: rgba(255,255,255,0.12);
+      --ts-cursor-stroke: rgba(255,255,255,0.35);
+      --ts-cursor-dot-stroke: #0d0d1a;
+      --ts-cursor-bg: rgba(10,10,22,0.85);
+      --night-band: rgba(0,0,0,0.3);
+      --chart-grid: rgba(255,255,255,0.07);
+      --chart-axis: rgba(255,255,255,0.1);
+      --chart-tick: rgba(255,255,255,0.2);
+      --chart-label: rgba(200,195,230,0.4);
+    }
+    html.theme-light {
+      --page-bg: #e5e7eb;
+      --panel-bg: rgba(255, 255, 255, 0.94);
+      --panel-border: rgba(15, 23, 42, 0.12);
+      --panel-text: #334155;
+      --title: #0f172a;
+      --subtitle: rgba(51, 65, 85, 0.72);
+      --divider: rgba(15, 23, 42, 0.1);
+      --muted: rgba(51, 65, 85, 0.65);
+      --muted-2: rgba(51, 65, 85, 0.48);
+      --muted-3: rgba(51, 65, 85, 0.55);
+      --muted-4: rgba(51, 65, 85, 0.5);
+      --accent: #6d28d9;
+      --accent-hover: #5b21b6;
+      --legend-title: rgba(51, 65, 85, 0.72);
+      --btn-bg: rgba(15, 23, 42, 0.05);
+      --btn-border: rgba(15, 23, 42, 0.12);
+      --btn-text: #475569;
+      --btn-hover-bg: rgba(15, 23, 42, 0.09);
+      --btn-hover-text: #0f172a;
+      --btn-active-bg: rgba(124, 58, 237, 0.18);
+      --btn-active-border: rgba(109, 40, 217, 0.45);
+      --btn-active-text: #5b21b6;
+      --slider-track-empty: rgba(15, 23, 42, 0.14);
+      --slider-thumb-border: #ffffff;
+      --tooltip-bg: rgba(255, 255, 255, 0.97);
+      --tooltip-border: rgba(109, 40, 217, 0.28);
+      --tooltip-shadow: 0 4px 24px rgba(15,23,42,0.12);
+      --cmap-label-bg: rgba(15, 23, 42, 0.05);
+      --cmap-active-border: rgba(109, 40, 217, 0.55);
+      --basemap-track: rgba(15, 23, 42, 0.1);
+      --basemap-track-border: rgba(15, 23, 42, 0.12);
+      --basemap-thumb: #ffffff;
+      --loading-bg: #e5e7eb;
+      --loading-text: rgba(51, 65, 85, 0.72);
+      --wave-cursor-stroke: rgba(15, 23, 42, 0.35);
+      --wave-tick-stroke: rgba(15, 23, 42, 0.18);
+      --ts-cursor-stroke: rgba(15, 23, 42, 0.35);
+      --ts-cursor-dot-stroke: #ffffff;
+      --ts-cursor-bg: rgba(255, 255, 255, 0.96);
+      --night-band: rgba(15, 23, 42, 0.06);
+      --chart-grid: rgba(15, 23, 42, 0.1);
+      --chart-axis: rgba(15, 23, 42, 0.14);
+      --chart-tick: rgba(15, 23, 42, 0.22);
+      --chart-label: rgba(51, 65, 85, 0.55);
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: #0d0d1a; overflow: hidden; }
+    html, body { width: 100%; height: 100%; background: var(--page-bg); overflow: hidden; }
 
     #map {
       position: absolute;
@@ -19,15 +112,17 @@
 
     .panel {
       position: absolute;
-      background: rgba(10, 10, 22, 0.84);
+      background: var(--panel-bg);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--panel-border);
       border-radius: 14px;
-      color: #e0e0f0;
+      color: var(--panel-text);
       font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
       z-index: 1000;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
     }
+    html:not(.theme-light) .panel { box-shadow: none; }
 
     /* Title + Stats — top left */
     #title-panel {
@@ -40,19 +135,19 @@
       font-size: 15px;
       font-weight: 700;
       letter-spacing: 0.4px;
-      color: #f0eeff;
+      color: var(--title);
       line-height: 1.3;
     }
     #title-panel .subtitle {
       font-size: 11px;
-      color: rgba(200, 195, 230, 0.5);
+      color: var(--subtitle);
       margin-top: 4px;
       line-height: 1.4;
     }
     #stats-box {
       margin-top: 14px;
       padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.07);
+      border-top: 1px solid var(--divider);
       display: grid;
       grid-template-columns: 1fr;
       gap: 6px;
@@ -63,10 +158,10 @@
       align-items: baseline;
       font-size: 11px;
     }
-    .stat-label { color: rgba(200, 195, 230, 0.5); }
+    .stat-label { color: var(--muted); }
     .stat-value {
       font-weight: 600;
-      color: #c4b5fd;
+      color: var(--accent);
       font-size: 12px;
     }
     .stat-peak-click {
@@ -74,7 +169,7 @@
       text-decoration: underline;
       text-underline-offset: 2px;
     }
-    .stat-peak-click:hover { color: #e9d5ff; }
+    .stat-peak-click:hover { color: var(--accent-hover); }
 
     /* Legend — top right */
     #legend-panel {
@@ -86,7 +181,7 @@
     .legend-title {
       font-size: 11px;
       font-weight: 600;
-      color: rgba(200,195,230,0.7);
+      color: var(--legend-title);
       text-transform: uppercase;
       letter-spacing: 0.8px;
       margin-bottom: 10px;
@@ -104,22 +199,80 @@
     .legend-tick {
       position: absolute;
       font-size: 9px;
-      color: rgba(200,195,230,0.45);
+      color: var(--muted-3);
       transform: translateX(-50%);
       white-space: nowrap;
     }
     .legend-note {
       margin-top: 10px;
       font-size: 10px;
-      color: rgba(200,195,230,0.35);
+      color: var(--muted-2);
       line-height: 1.5;
+    }
+
+    .basemap-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .basemap-label {
+      font-size: 10px;
+      color: var(--muted-3);
+      font-weight: 500;
+    }
+    .basemap-label.active { color: var(--accent); }
+    .basemap-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .basemap-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .basemap-switch-track {
+      position: absolute;
+      inset: 0;
+      background: var(--basemap-track);
+      border-radius: 11px;
+      border: 1px solid var(--basemap-track-border);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .basemap-switch-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: var(--basemap-thumb);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .basemap-switch input:checked + .basemap-switch-track {
+      background: rgba(124, 58, 237, 0.45);
+      border-color: rgba(168, 85, 247, 0.55);
+    }
+    .basemap-switch input:checked + .basemap-switch-track .basemap-switch-thumb {
+      transform: translateX(18px);
+      background: #f0eeff;
+    }
+    .basemap-switch input:focus-visible + .basemap-switch-track {
+      outline: 2px solid rgba(168, 85, 247, 0.7);
+      outline-offset: 2px;
     }
 
     /* Colormap swatches */
     .cmap-section-title {
       font-size: 10px;
       font-weight: 600;
-      color: rgba(200,195,230,0.45);
+      color: var(--muted-2);
       text-transform: uppercase;
       letter-spacing: 0.7px;
       margin: 12px 0 6px;
@@ -137,17 +290,17 @@
       transition: border-color 0.15s, transform 0.1s;
     }
     .cmap-swatch:hover { transform: scale(1.03); }
-    .cmap-swatch.active { border-color: rgba(255,255,255,0.55); }
+    .cmap-swatch.active { border-color: var(--cmap-active-border); }
     .cmap-swatch-bar {
       height: 8px;
       width: 100%;
     }
     .cmap-swatch-label {
       font-size: 9px;
-      color: rgba(200,195,230,0.55);
+      color: var(--muted-3);
       text-align: center;
       padding: 3px 0 4px;
-      background: rgba(255,255,255,0.04);
+      background: var(--cmap-label-bg);
       line-height: 1;
     }
 
@@ -189,9 +342,9 @@
     }
 
     .btn {
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #d0ccee;
+      background: var(--btn-bg);
+      border: 1px solid var(--btn-border);
+      color: var(--btn-text);
       border-radius: 8px;
       padding: 6px 13px;
       cursor: pointer;
@@ -203,13 +356,13 @@
       line-height: 1;
     }
     .btn:hover {
-      background: rgba(255, 255, 255, 0.13);
-      color: #f0eeff;
+      background: var(--btn-hover-bg);
+      color: var(--btn-hover-text);
     }
     .btn.active {
-      background: rgba(124, 58, 237, 0.45);
-      border-color: rgba(168, 85, 247, 0.7);
-      color: #e9d5ff;
+      background: var(--btn-active-bg);
+      border-color: var(--btn-active-border);
+      color: var(--btn-active-text);
     }
     #btn-play {
       font-size: 14px;
@@ -227,12 +380,12 @@
     #time-label {
       font-size: 13px;
       font-weight: 600;
-      color: #c4b5fd;
+      color: var(--accent);
       letter-spacing: 0.3px;
     }
     #step-counter {
       font-size: 10px;
-      color: rgba(200, 195, 230, 0.35);
+      color: var(--muted-2);
     }
 
     .controls-bottom {
@@ -242,7 +395,7 @@
     }
     .slider-edge-label {
       font-size: 10px;
-      color: rgba(200, 195, 230, 0.4);
+      color: var(--muted-4);
       white-space: nowrap;
       min-width: 38px;
     }
@@ -257,8 +410,8 @@
         to right,
         #7c3aed 0%,
         #7c3aed var(--pct, 0%),
-        rgba(255,255,255,0.12) var(--pct, 0%),
-        rgba(255,255,255,0.12) 100%
+        var(--slider-track-empty) var(--pct, 0%),
+        var(--slider-track-empty) 100%
       );
       border-radius: 2px;
       outline: none;
@@ -270,44 +423,44 @@
       height: 16px;
       background: #a855f7;
       border-radius: 50%;
-      border: 2px solid rgba(240, 238, 255, 0.9);
+      border: 2px solid var(--slider-thumb-border);
       cursor: pointer;
       transition: transform 0.12s;
-      box-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+      box-shadow: 0 0 8px rgba(168, 85, 247, 0.45);
     }
     #time-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
     #time-slider::-moz-range-thumb {
       width: 14px; height: 14px;
       background: #a855f7;
       border-radius: 50%;
-      border: 2px solid rgba(240,238,255,0.9);
+      border: 2px solid var(--slider-thumb-border);
       cursor: pointer;
     }
 
     /* Tooltip */
     #tooltip-box {
       position: fixed;
-      background: rgba(8, 8, 20, 0.93);
-      border: 1px solid rgba(168, 85, 247, 0.35);
+      background: var(--tooltip-bg);
+      border: 1px solid var(--tooltip-border);
       border-radius: 10px;
       padding: 10px 13px;
       font-size: 12px;
       font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-      color: #e0e0f0;
+      color: var(--panel-text);
       pointer-events: none;
       z-index: 2000;
       display: none;
       max-width: 190px;
       line-height: 1.7;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      box-shadow: var(--tooltip-shadow);
     }
     .tt-oid {
       font-weight: 700;
-      color: #c4b5fd;
+      color: var(--accent);
       margin-bottom: 3px;
       font-size: 13px;
     }
-    .tt-dim { color: rgba(200, 195, 230, 0.45); font-size: 10px; margin-top: 3px; }
+    .tt-dim { color: var(--muted-3); font-size: 10px; margin-top: 3px; }
 
     /* Time Series Panel — bottom right */
     #ts-panel {
@@ -331,22 +484,22 @@
       align-items: center;
       justify-content: space-between;
       padding: 12px 14px 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid var(--divider);
     }
     #ts-edge-title {
       font-size: 13px;
       font-weight: 700;
-      color: #f0eeff;
+      color: var(--title);
     }
     #ts-edge-meta {
       font-size: 10px;
-      color: rgba(200,195,230,0.45);
+      color: var(--muted-3);
       margin-top: 1px;
     }
     #ts-close {
       background: none;
       border: none;
-      color: rgba(200,195,230,0.4);
+      color: var(--muted-4);
       font-size: 18px;
       cursor: pointer;
       padding: 0 2px;
@@ -354,7 +507,7 @@
       font-family: inherit;
       transition: color 0.15s;
     }
-    #ts-close:hover { color: #e0e0f0; }
+    #ts-close:hover { color: var(--panel-text); }
     #ts-chart-wrap {
       padding: 4px 14px 0;
     }
@@ -367,7 +520,7 @@
       display: flex;
       justify-content: space-between;
       padding: 8px 14px 12px;
-      border-top: 1px solid rgba(255,255,255,0.06);
+      border-top: 1px solid var(--divider);
     }
     .ts-stat {
       display: flex;
@@ -378,12 +531,12 @@
       font-size: 9px;
       text-transform: uppercase;
       letter-spacing: 0.7px;
-      color: rgba(200,195,230,0.4);
+      color: var(--muted-4);
     }
     .ts-stat-value {
       font-size: 13px;
       font-weight: 700;
-      color: #c4b5fd;
+      color: var(--accent);
     }
     .ts-stat-value.now { color: #f9a8d4; }
 
@@ -391,7 +544,7 @@
     #loading {
       position: fixed;
       inset: 0;
-      background: #0d0d1a;
+      background: var(--loading-bg);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -403,7 +556,7 @@
     #loading.fade-out { opacity: 0; pointer-events: none; }
     .loading-text {
       font-family: 'Inter', system-ui, sans-serif;
-      color: rgba(200, 195, 230, 0.6);
+      color: var(--loading-text);
       font-size: 14px;
       letter-spacing: 0.5px;
     }
@@ -421,6 +574,35 @@
       50% { transform: scale(1); opacity: 1; }
     }
     .loading-dots { display: flex; gap: 8px; }
+
+    #wave-cursor { stroke: var(--wave-cursor-stroke); }
+    #ts-cursor-line { stroke: var(--ts-cursor-stroke); }
+    #ts-cursor-dot { stroke: var(--ts-cursor-dot-stroke); }
+    #ts-cursor-bg { fill: var(--ts-cursor-bg); }
+
+    .leaflet-container { background: var(--page-bg); }
+    html:not(.theme-light) .leaflet-control-attribution {
+      background: rgba(10, 10, 22, 0.82);
+      color: rgba(200, 195, 230, 0.85);
+    }
+    html:not(.theme-light) .leaflet-control-attribution a { color: var(--accent); }
+    html.theme-light .leaflet-control-attribution {
+      background: rgba(255, 255, 255, 0.9);
+      color: #475569;
+    }
+    html.theme-light .leaflet-control-attribution a { color: #6d28d9; }
+    html:not(.theme-light) .leaflet-bar a {
+      background: rgba(28, 28, 42, 0.95);
+      color: #e8e8f0;
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    html:not(.theme-light) .leaflet-bar a:hover { background: rgba(255, 255, 255, 0.08); }
+    html.theme-light .leaflet-bar a {
+      background: #fff;
+      color: #334155;
+      border-color: rgba(15, 23, 42, 0.12);
+    }
+    html.theme-light .leaflet-bar a:hover { background: #f1f5f9; }
   </style>
 </head>
 <body>
@@ -438,7 +620,7 @@
 
   <div id="title-panel" class="panel">
     <h1>GT Campus<br>Pedestrian Flow</h1>
-    <div class="subtitle">1,493 edges &middot; 288 time steps<br>10-minute bins &middot; Apr 13–15 2025</div>
+    <div class="subtitle">1,493 edges &middot; 288 time steps<br>10-minute bins &middot; Apr 14–16 2025 (48 h)</div>
     <div id="stats-box">
       <div class="stat-row">
         <span class="stat-label">Active edges</span>
@@ -477,19 +659,30 @@
     <button class="btn clip-btn active" id="btn-clip" title="Clip color scale to 1–99% range" style="margin-top:4px;width:100%">Clip 1–99%</button>
     <div class="cmap-section-title">Colormap</div>
     <div id="cmap-swatches"></div>
+    <div class="cmap-section-title">Basemap</div>
+    <div class="basemap-row">
+      <span class="basemap-label" id="basemap-label-light">Light</span>
+      <label class="basemap-switch" title="Switch map tiles">
+        <input type="checkbox" id="basemap-dark" checked aria-label="Dark basemap tiles">
+        <span class="basemap-switch-track"><span class="basemap-switch-thumb"></span></span>
+      </label>
+      <span class="basemap-label active" id="basemap-label-dark">Dark</span>
+    </div>
   </div>
 
   <div id="controls-panel" class="panel">
     <div class="controls-top">
       <div class="btn-group">
         <button class="btn" id="btn-play" title="Play / Pause">&#9654;</button>
+        <button class="btn speed-btn" data-speed="0.25" title="Quarter speed">¼&times;</button>
+        <button class="btn speed-btn" data-speed="0.5" title="Half speed">½&times;</button>
         <button class="btn speed-btn active" data-speed="1">1&times;</button>
         <button class="btn speed-btn"        data-speed="2">2&times;</button>
         <button class="btn speed-btn"        data-speed="4">4&times;</button>
       </div>
       <div class="time-info">
         <div id="time-label">Loading&hellip;</div>
-        <div id="step-counter">Step — / __N_STEPS__</div>
+        <div id="step-counter">Step — / 288</div>
       </div>
     </div>
     <div id="campus-wave-wrap">
@@ -510,9 +703,9 @@
       </svg>
     </div>
     <div class="controls-bottom">
-      <span class="slider-edge-label">Apr 13</span>
-      <input type="range" id="time-slider" min="0" max="__N_STEPS_MINUS1__" value="0">
-      <span class="slider-edge-label">Apr 15</span>
+      <span class="slider-edge-label">Apr 14</span>
+      <input type="range" id="time-slider" min="0" max="287" value="0">
+      <span class="slider-edge-label">Apr 16</span>
     </div>
   </div>
 
@@ -587,9 +780,9 @@
   // ============================================================
   const GEO_DATA            = __GEO_JSON__;
   const TS_B64              = '__TS_B64__';
-  const TS_B64_DENSITY      = '__TS_B64_DENSITY__';
-  const EDGE_LENGTHS_B64    = '__EDGE_LENGTHS_B64__';
-  const TS_LABELS           = __TS_LABELS__;
+    const TS_B64_DENSITY              = '__TS_B64_DENSITY__';
+    const EDGE_LENGTHS_B64              = '__EDGE_LENGTHS_B64__';
+    const TS_LABELS           = __TS_LABELS__;
   const CMAPS               = __CMAPS__;
   const CAMPUS_TOTALS       = __CAMPUS_TOTALS__;
   const CAMPUS_TOTALS_DENSITY = __CAMPUS_TOTALS_DENSITY__;
@@ -605,8 +798,16 @@
   // ============================================================
   // CONSTANTS
   // ============================================================
-  const INACTIVE     = { color: '#2a2a3c', opacity: 0.22, weight: 1 };
   const FRAME_MS     = 300;   // ms per step at 1× speed
+
+  function getInactiveStyle() {
+    return document.documentElement.classList.contains('theme-light')
+      ? { color: '#94a3b8', opacity: 0.42, weight: 1 }
+      : { color: '#2a2a3c', opacity: 0.22, weight: 1 };
+  }
+  function getSelectionEdgeColor() {
+    return document.documentElement.classList.contains('theme-light') ? '#0f172a' : '#ffffff';
+  }
 
   let useDensity = false;
 
@@ -749,11 +950,42 @@
     attributionControl: true
   });
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 20
-  }).addTo(map);
+  const TILE_ATTR =
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
+  const tileOpts = { attribution: TILE_ATTR, subdomains: 'abcd', maxZoom: 20 };
+  const baseDark = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    tileOpts
+  );
+  const baseLight = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    tileOpts
+  );
+  baseDark.addTo(map);
+
+  (function basemapToggle() {
+    const input = document.getElementById('basemap-dark');
+    const lblLight = document.getElementById('basemap-label-light');
+    const lblDark = document.getElementById('basemap-label-dark');
+    function syncLabels() {
+      const dark = input.checked;
+      lblLight.classList.toggle('active', !dark);
+      lblDark.classList.toggle('active', dark);
+    }
+    input.addEventListener('change', () => {
+      const dark = input.checked;
+      if (dark) {
+        map.removeLayer(baseLight);
+        baseDark.addTo(map);
+      } else {
+        map.removeLayer(baseDark);
+        baseLight.addTo(map);
+      }
+      syncLabels();
+      applyUiTheme(dark);
+    });
+    syncLabels();
+  })();
 
   // ============================================================
   // BUILD POLYLINES  (one per edge, Canvas renderer)
@@ -763,7 +995,7 @@
   GEO_DATA.forEach((edge, i) => {
     const latlngs = edge.c.map(([lon, lat]) => [lat, lon]);
     const pl = L.polyline(latlngs, {
-      ...INACTIVE,
+      ...getInactiveStyle(),
       renderer: renderer,
       interactive: true
     });
@@ -791,7 +1023,7 @@
     for (let i = 0; i < N_EDGES; i++) {
       const count = mVal(step, i);
       if (count <= 0) {
-        polylines[i].setStyle(INACTIVE);
+        polylines[i].setStyle(getInactiveStyle());
       } else {
         const t      = normalize(count);
         const color  = cmapColor(t);
@@ -801,6 +1033,9 @@
         total += traversalsAt(step, i);
         if (count > peak) { peak = count; peakOid = GEO_DATA[i].oid; peakEdgeIdx = i; }
       }
+    }
+    if (selectedEdgeIdx !== null && selectedPolyline) {
+      selectedPolyline.setStyle({ color: getSelectionEdgeColor(), opacity: 1.0, weight: 4 });
     }
     lastPeakEdgeIdx = peakEdgeIdx;
 
@@ -902,7 +1137,8 @@
     tooltip.style.display = 'none';
     const i     = e.target._edgeIdx;
     const count = mVal(currentStep, i);
-    e.target.setStyle({ opacity: count > 0 ? 0.88 : 0.22 });
+    if (count > 0) e.target.setStyle({ opacity: 0.88 });
+    else e.target.setStyle(getInactiveStyle());
   }
 
   function onMove(e) {
@@ -927,24 +1163,19 @@
   let edgeCounts = null;   // Float32Array, length N_STEPS, for the open edge
   let edgeMax    = 1;
 
-  // Time bin positions for x-axis landmarks
-  // Data starts Apr 13 20:00 EDT (UTC-4).  Each bin = 10 min.
-  // Midnight Apr 14 EDT  = bin 24   (4h × 6)
-  // Noon     Apr 14 EDT  = bin 96   (16h × 6)
-  // Midnight Apr 15 EDT  = bin 168  (28h × 6)
-  // Noon     Apr 15 EDT  = bin 240  (40h × 6)
+  // Time bin positions for x-axis landmarks (bin 0 = midnight Apr 14 local, +4h label correction in generate_viz)
+  // Each bin = 10 min.  Noon = +72 bins; midnight next day = +144 bins.
   const X_TICKS = [
-    { bin: 0,   label: '8 PM\nApr 13' },
-    { bin: 24,  label: 'Midnight' },
-    { bin: 96,  label: 'Noon\nApr 14' },
-    { bin: 168, label: 'Midnight' },
-    { bin: 240, label: 'Noon\nApr 15' },
-    { bin: 287, label: '8 PM' },
+    { bin: 0,   label: 'Midnight\nApr 14' },
+    { bin: 72,  label: 'Noon\nApr 14' },
+    { bin: 144, label: 'Midnight\nApr 15' },
+    { bin: 216, label: 'Noon\nApr 15' },
+    { bin: 287, label: '11:50 PM\nApr 15' },
   ];
-  // Night bands: 8PM-midnight (0-23) and 10PM Apr14-6AM Apr15 (132-204)
+  // Local night (~10pm–6am): Apr 14→15 and Apr 15→16
   const NIGHT_BANDS = [
-    { start: 0,   end: 24  },   // eve of Apr 13
-    { start: 132, end: 192 },   // night of Apr 14→15
+    { start: 132, end: 180 },
+    { start: 204, end: 252 },
   ];
 
   function binToX(bin) {
@@ -994,13 +1225,25 @@
     return el;
   }
 
+  function chartThemeColors() {
+    const r = document.documentElement;
+    const g = (name) => getComputedStyle(r).getPropertyValue(name).trim();
+    return {
+      nightBand: g('--night-band'),
+      grid: g('--chart-grid'),
+      axis: g('--chart-axis'),
+      tick: g('--chart-tick'),
+      label: g('--chart-label')
+    };
+  }
+
   function openTimeSeries(edgeIdx, oid) {
     // De-select previous
     if (selectedPolyline) {
       const prevCount = mVal(currentStep, selectedEdgeIdx);
       const prevT = normalize(prevCount);
       if (prevCount <= 0) {
-        selectedPolyline.setStyle(INACTIVE);
+        selectedPolyline.setStyle(getInactiveStyle());
       } else {
         selectedPolyline.setStyle({ color: cmapColor(prevT), opacity: 0.88, weight: 1.5 + 3.5 * prevT });
       }
@@ -1021,8 +1264,7 @@
     selectedEdgeIdx = edgeIdx;
     selectedPolyline = polylines[edgeIdx];
 
-    // Highlight selected edge: white outline
-    selectedPolyline.setStyle({ color: '#ffffff', opacity: 1.0, weight: 4 });
+    selectedPolyline.setStyle({ color: getSelectionEdgeColor(), opacity: 1.0, weight: 4 });
 
     // Update panel header
     const meta = GEO_DATA[edgeIdx];
@@ -1037,6 +1279,7 @@
 
     // Rebuild SVG chart
     const svg = document.getElementById('ts-chart');
+    const ct = chartThemeColors();
 
     // Night bands
     const nightG = document.getElementById('night-bands');
@@ -1047,7 +1290,7 @@
         y: MT,
         width: (binToX(end) - binToX(start)).toFixed(1),
         height: CH,
-        fill: 'rgba(0,0,0,0.3)'
+        fill: ct.nightBand
       }));
     });
 
@@ -1059,7 +1302,7 @@
       const y = countToY(val).toFixed(1);
       yGridG.appendChild(svgEl('line', {
         x1: ML, x2: ML + CW, y1: y, y2: y,
-        stroke: 'rgba(255,255,255,0.07)', 'stroke-width': 1
+        stroke: ct.grid, 'stroke-width': 1
       }));
     });
 
@@ -1069,7 +1312,7 @@
     [0, edgeMax * 0.5, edgeMax].forEach(val => {
       const y = countToY(val).toFixed(1);
       const t = yAxisG.appendChild(svgEl('text', {
-        x: ML - 4, y, fill: 'rgba(200,195,230,0.4)',
+        x: ML - 4, y, fill: ct.label,
         'font-size': 9, 'text-anchor': 'end', dy: '0.35em'
       }));
       t.textContent = useDensity ? fmtMetric(val) : (val >= 1000 ? `${(val/1000).toFixed(1)}k` : String(Math.round(val)));
@@ -1081,20 +1324,20 @@
     // Axis baseline
     xAxisG.appendChild(svgEl('line', {
       x1: ML, x2: ML + CW, y1: MT + CH, y2: MT + CH,
-      stroke: 'rgba(255,255,255,0.1)', 'stroke-width': 1
+      stroke: ct.axis, 'stroke-width': 1
     }));
     X_TICKS.forEach(({ bin, label }) => {
       const x = binToX(bin).toFixed(1);
       xAxisG.appendChild(svgEl('line', {
         x1: x, x2: x, y1: MT + CH, y2: MT + CH + 4,
-        stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1
+        stroke: ct.tick, 'stroke-width': 1
       }));
       // Multi-line labels: split on '\n'
       const lines = label.split('\n');
       lines.forEach((line, li) => {
         const txt = xAxisG.appendChild(svgEl('text', {
           x, y: MT + CH + 8 + li * 10,
-          fill: 'rgba(200,195,230,0.4)',
+          fill: ct.label,
           'font-size': 9, 'text-anchor': 'middle', dy: '0.7em'
         }));
         txt.textContent = line;
@@ -1153,7 +1396,7 @@
     if (selectedPolyline && selectedEdgeIdx !== null) {
       const count = mVal(currentStep, selectedEdgeIdx);
       const t = normalize(count);
-      if (count <= 0) selectedPolyline.setStyle(INACTIVE);
+      if (count <= 0) selectedPolyline.setStyle(getInactiveStyle());
       else selectedPolyline.setStyle({ color: cmapColor(t), opacity: 0.88, weight: 1.5 + 3.5 * t });
     }
     selectedEdgeIdx  = null;
@@ -1300,14 +1543,17 @@
     document.getElementById('wave-grad-top').setAttribute('stop-color', topColor);
     document.getElementById('wave-line').setAttribute('stroke', topColor);
 
-    // Midnight tick markers (bins 24 and 168)
+    // Midnight tick markers (bins 0 = Apr 14, 144 = Apr 15)
     const ticksG = document.getElementById('wave-ticks');
-    [24, 168].forEach(bin => {
+    ticksG.innerHTML = '';
+    const waveTickStroke = getComputedStyle(document.documentElement)
+      .getPropertyValue('--wave-tick-stroke').trim();
+    [0, 144].forEach(bin => {
       const x = bx(bin).toFixed(1);
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', x); line.setAttribute('x2', x);
       line.setAttribute('y1', 0); line.setAttribute('y2', H);
-      line.setAttribute('stroke', 'rgba(255,255,255,0.12)');
+      line.setAttribute('stroke', waveTickStroke);
       line.setAttribute('stroke-width', '1');
       line.setAttribute('stroke-dasharray', '2,2');
       ticksG.appendChild(line);
@@ -1323,6 +1569,15 @@
     const x   = ((step / (N_STEPS - 1)) * W).toFixed(1);
     document.getElementById('wave-cursor').setAttribute('x1', x);
     document.getElementById('wave-cursor').setAttribute('x2', x);
+  }
+
+  function applyUiTheme(isDark) {
+    document.documentElement.classList.toggle('theme-light', !isDark);
+    updateFrame(currentStep);
+    buildCampusWave();
+    if (selectedEdgeIdx !== null) {
+      openTimeSeries(selectedEdgeIdx, GEO_DATA[selectedEdgeIdx].oid);
+    }
   }
 
   // ============================================================
@@ -1349,7 +1604,7 @@
 
   document.querySelectorAll('.speed-btn').forEach(btn => {
     btn.addEventListener('click', function () {
-      speedMult = parseInt(this.dataset.speed);
+      speedMult = parseFloat(this.dataset.speed);
       document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
       lastTime = null;  // reset frame timer

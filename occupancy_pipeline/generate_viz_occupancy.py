@@ -11,6 +11,7 @@ Usage (from this folder):
 
 import base64
 import json
+import sys
 from pathlib import Path
 
 import geopandas as gpd
@@ -19,6 +20,12 @@ import pandas as pd
 
 HERE     = Path(__file__).resolve().parent
 BASE     = HERE.parent
+sys.path.insert(0, str(BASE))
+from generate_viz import (  # noqa: E402
+    build_campus_totals_density,
+    build_edge_lengths_b64,
+    build_ts_float_b64,
+)
 PARQUET  = HERE / "edge_occupancy_series.parquet"
 GEOJSON  = BASE / "network_files" / "walk_edges_clean.geojson"
 TEMPLATE = BASE / "template.html"
@@ -26,6 +33,7 @@ OUTPUT   = HERE / "index_occupancy.html"
 
 COORD_PREC  = 5
 TIMEZONE    = "US/Eastern"
+DISPLAY_LABEL_OFFSET = pd.Timedelta(hours=4)
 
 TEMPLATE_PATCHES = [
     (
@@ -33,8 +41,8 @@ TEMPLATE_PATCHES = [
         "<title>GT Campus Pedestrian Occupancy</title>",
     ),
     (
-        "// DECODE MATRIX  (Int16, row-major, 288 × 1493)",
-        "// DECODE MATRIX  (Int32, row-major, steps × edges) — occupancy viz",
+        "// DECODE MATRICES  (row-major: time × edges)",
+        "// DECODE MATRICES  (Int32, row-major: time × edges) — occupancy viz",
     ),
     ("return new Int16Array(buf);", "return new Int32Array(buf);"),
     (
@@ -42,26 +50,32 @@ TEMPLATE_PATCHES = [
         "<h1>GT Campus<br>Pedestrian Occupancy</h1>",
     ),
     (
-        '<div class="subtitle">1,493 edges &middot; 288 time steps<br>10-minute bins &middot; Apr 13–15 2025</div>',
-        '<div class="subtitle">1,493 edges &middot; 288 time steps<br>Mid-bin snapshot occupancy &middot; Apr 13–15 2025</div>',
+        '<div class="subtitle">1,493 edges &middot; 288 time steps<br>10-minute bins &middot; Apr 14–16 2025 (48 h)</div>',
+        '<div class="subtitle">1,493 edges &middot; 288 time steps<br>Mid-bin snapshot occupancy &middot; Apr 14–16 2025 (48 h)</div>',
     ),
     (
-        '<span class="stat-label">Edge traversals</span>',
-        '<span class="stat-label">People on edges</span>',
+        '<span class="stat-label" id="stat-total-label">Edge traversals</span>',
+        '<span class="stat-label" id="stat-total-label">People on edges</span>',
     ),
     (
-        'title="Average traversals per active edge (flow concentration)"',
-        'title="Average people on edge among active edges"',
-    ),
-    ('<div class="legend-title">Traversals / 10 min</div>',
-     '<div class="legend-title">People on edge (snapshot)</div>'),
-    (
-        '<span class="ts-stat-label">48 hr traversals</span>',
-        '<span class="ts-stat-label">48 hr sum (snapshots)</span>',
+        'title="Mean among active edges"',
+        'title="Mean people among active edges"',
     ),
     (
-        "`${count} traversal${count !== 1 ? 's' : ''}`",
-        "`${count} person${count !== 1 ? 's' : ''}`",
+        '<div class="legend-title" id="legend-metric-title">Traversals / 10 min</div>',
+        '<div class="legend-title" id="legend-metric-title">People on edge (snapshot)</div>',
+    ),
+    (
+        '<span class="ts-stat-label" id="ts-total-label">48 hr traversals</span>',
+        '<span class="ts-stat-label" id="ts-total-label">48 hr sum (snapshots)</span>',
+    ),
+    (
+        "`${fmtMetric(v)} /ft · ${Math.round(tr)} traversal${tr !== 1 ? 's' : ''}`",
+        "`${fmtMetric(v)} /ft · ${Math.round(tr)} person${tr !== 1 ? 's' : ''}`",
+    ),
+    (
+        "`${Math.round(tr)} traversal${tr !== 1 ? 's' : ''}`",
+        "`${Math.round(tr)} person${tr !== 1 ? 's' : ''}`",
     ),
 ]
 
@@ -106,8 +120,8 @@ def build_ts_b64(ts, oids_sorted):
 
 
 def build_labels(ts):
-    ts_edt = ts.index.tz_convert(TIMEZONE)
-    labels = [dt.strftime("%-a %-b %-d, %-I:%M %p") for dt in ts_edt]
+    ts_adj = ts.index.tz_convert(TIMEZONE) + DISPLAY_LABEL_OFFSET
+    labels = [dt.strftime("%-a %-b %-d, %-I:%M %p") for dt in ts_adj]
     return json.dumps(labels, separators=(",", ":"))
 
 
@@ -156,24 +170,40 @@ def main():
     ts_labels   = build_labels(ts)
     cmaps_json  = build_all_cmaps()
     campus_totals = build_campus_totals(ts)
+    campus_totals_d = build_campus_totals_density(ts, edges)
+
+    oid_len = {str(int(r["OBJECTID"])): float(r["length_ft"]) for _, r in edges.iterrows()}
+    L = ts.columns.map(lambda c: oid_len.get(c, 1.0)).astype(float)
+    L = np.maximum(L, 1e-6)
+    ts_density = ts.div(L, axis=1).astype(np.float32)
+    ts_d_b64, global_max_d = build_ts_float_b64(ts_density, oids_sorted)
+    lens_b64 = build_edge_lengths_b64(edges, oids_sorted)
 
     all_vals = ts.values.flatten()
-    p1, p99  = int(np.percentile(all_vals, 1)), int(np.percentile(all_vals, 99))
+    p1, p99 = int(np.percentile(all_vals, 1)), int(np.percentile(all_vals, 99))
+    all_d = ts_density.values.flatten()
+    p1d, p99d = float(np.percentile(all_d, 1)), float(np.percentile(all_d, 99))
 
     template_str = apply_occupancy_patches(TEMPLATE.read_text(encoding="utf-8"))
 
     for token, value in {
-        "__GEO_JSON__":        geo_json,
-        "__TS_B64__":          ts_b64,
-        "__TS_LABELS__":       ts_labels,
-        "__CMAPS__":           cmaps_json,
-        "__CAMPUS_TOTALS__":   campus_totals,
-        "__N_EDGES__":         str(n_edges),
-        "__N_STEPS__":         str(n_steps),
-        "__N_STEPS_MINUS1__":  str(n_steps - 1),
-        "__GLOBAL_MAX__":      str(global_max),
-        "__P1__":              str(p1),
-        "__P99__":             str(p99),
+        "__GEO_JSON__":              geo_json,
+        "__TS_B64__":                ts_b64,
+        "__TS_B64_DENSITY__":        ts_d_b64,
+        "__EDGE_LENGTHS_B64__":      lens_b64,
+        "__TS_LABELS__":             ts_labels,
+        "__CMAPS__":                 cmaps_json,
+        "__CAMPUS_TOTALS__":         campus_totals,
+        "__CAMPUS_TOTALS_DENSITY__": campus_totals_d,
+        "__N_EDGES__":               str(n_edges),
+        "__N_STEPS__":               str(n_steps),
+        "__N_STEPS_MINUS1__":        str(n_steps - 1),
+        "__GLOBAL_MAX__":            str(global_max),
+        "__P1__":                    str(p1),
+        "__P99__":                   str(p99),
+        "__GLOBAL_MAX_D__":          repr(global_max_d),
+        "__P1_D__":                  repr(p1d),
+        "__P99_D__":                 repr(p99d),
     }.items():
         template_str = template_str.replace(token, value)
 

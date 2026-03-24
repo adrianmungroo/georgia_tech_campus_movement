@@ -3,6 +3,9 @@ generate_viz.py
 Reads edge_time_series.parquet + network_files/walk_edges_clean.geojson
 and renders a fully self-contained index.html visualization.
 
+Edit **template.html** for UI/JS/CSS changes; this script overwrites **index.html**
+on every run (embedded data is injected into the template).
+
 Usage:
     python3 generate_viz.py
 """
@@ -25,6 +28,8 @@ OUTPUT      = HERE / "index.html"
 
 COORD_PREC  = 5   # decimal places for coordinates (~1 m precision)
 TIMEZONE    = "US/Eastern"
+# Labels are shifted +4h so displayed local times match the true bin starts (UTC→Eastern was 4h early).
+DISPLAY_LABEL_OFFSET = pd.Timedelta(hours=4)
 
 
 # ------------------------------------------------------------------ loaders
@@ -107,11 +112,10 @@ def build_edge_lengths_b64(edges, oids_sorted):
 # ------------------------------------------------------------------ labels
 def build_labels(ts):
     """
-    Converts UTC index to US/Eastern, returns JSON array of formatted strings.
-    Example: ["Sun Apr 13, 8:00 PM", ...]
+    Converts UTC index to US/Eastern, applies DISPLAY_LABEL_OFFSET, returns JSON array of strings.
     """
-    ts_edt = ts.index.tz_convert(TIMEZONE)
-    labels = [dt.strftime("%-a %-b %-d, %-I:%M %p") for dt in ts_edt]
+    ts_adj = ts.index.tz_convert(TIMEZONE) + DISPLAY_LABEL_OFFSET
+    labels = [dt.strftime("%-a %-b %-d, %-I:%M %p") for dt in ts_adj]
     return json.dumps(labels, separators=(",", ":"))
 
 
