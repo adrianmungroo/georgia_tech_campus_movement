@@ -1,0 +1,3 @@
+- add directionality to the network
+- consider that not all entrance nodes are equally popular.
+- consider the effects of congestion-avoidance
