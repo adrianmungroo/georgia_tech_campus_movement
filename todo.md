@@ -1,5 +1,4 @@
 ### Main
-- Investigate timestamps
 - add capability to cut edges and recalculate the movement
 - concept of "building main points" for select buildings where students gravitate towards when entering a building
 
